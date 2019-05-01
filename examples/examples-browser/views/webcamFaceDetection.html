@@ -20,27 +20,41 @@
       <div class="indeterminate"></div>
     </div>
     <div style="position: relative" class="margin">
-      <video onplay="resize_canvas(this)" id="inputVideo" autoplay muted></video>
+      <video onplay="resizeCanvas(this)" id="inputVideo" autoplay muted></video>
       <canvas id="overlay" />
     </div>
-    <input type="search" id="q" name="q" size=60>
-    <input type="button" value="Click to Speak" onclick="recognition.start()">
+    <input style="display: none" type="search" id="q" name="q" size="60">
+    <input type="button" id="start" value="Click to Speak" onclick="handleRecognitionStart(this)">
 </body>
 
 <script>
   let isCameraOpen = false;
+  let isRecognizingSpeechInput = false;
+  const triggerWords = "mirror mirror";
 
   var recognition = new webkitSpeechRecognition();
   recognition.continuous = true;
   recognition.onresult = function (event) {
     if (event.results.length > 0) {
-      q.value = event.results[0][0].transcript
-      console.log(q.value)
-      handleSpeechTrigger()
+      const { transcript } = event.results[0][0];
+      console.log(transcript)
+      q.value = transcript;
+      if (transcript.trim().toLowerCase().indexOf(triggerWords) >= 0) {
+        showLoader();
+        handleSpeechTrigger();
+      }
     }
-    recognition.stop()
+    recognition.stop();
+    isRecognizingSpeechInput = false;
+    $("#start").prop("disabled", false);
   }
   let forwardTimes = []
+
+  function handleRecognitionStart() {
+    isRecognizingSpeechInput = true;
+    $("#start").prop("disabled", true);
+    recognition.start();
+  }
 
   async function handleSpeechTrigger() {
     await initWebcam();
@@ -148,12 +162,20 @@
       }
     }
 
-    for (let track of videoEl.srcObject.getTracks()) {
-      track.stop();
-    }
+    // close webcam
+    // for (let track of videoEl.srcObject.getTracks()) {
+    //   track.stop();
+    // }
 
-    $("#inputVideo").css("opacity", 0)
-    //     setTimeout(() => handleSpeechTrigger(videoEl), 5000)
+    hideLoader();
+    $("#overlay").fadeTo(100, 1);
+    $("#inputVideo").fadeTo(300, 0);
+
+    setTimeout(() => {
+      // fade back to video
+      $("#inputVideo").fadeTo(2000, 1);
+      $("#overlay").fadeTo(2000, 0);
+    }, 3000);
   }
 
   async function run() {
@@ -164,7 +186,7 @@
     await faceapi.loadFaceLandmarkModel('/')
     await faceapi.loadFaceRecognitionModel('/')
     await initWebcam();
-    $('#loader').hide();
+    hideLoader();
   }
 
   async function initWebcam() {
@@ -184,12 +206,20 @@
     run()
   })
 
-  function resize_canvas(element) {
+  function resizeCanvas(element) {
     var w = element.offsetWidth;
     var h = element.offsetHeight;
     var cv = document.getElementById("overlay");
     cv.width = w;
     cv.height = h;
+  }
+
+  function hideLoader() {
+    $("#loader").fadeTo(300, 0);
+  }
+
+  function showLoader() {
+    $("#loader").fadeTo(300, 1);
   }
 
 </script>
