@@ -20,7 +20,7 @@
       <div class="indeterminate"></div>
     </div>
     <div style="position: relative" class="margin">
-      <video onloadedmetadata="onPlay(this)" onplay="resize_canvas(this)" id="inputVideo" autoplay muted></video>
+      <video onplay="resize_canvas(this)" id="inputVideo" autoplay muted></video>
       <canvas id="overlay" />
     </div>
     <input type="search" id="q" name="q" size=60>
@@ -28,26 +28,22 @@
 </body>
 
 <script>
+  let isCameraOpen = false;
+
   var recognition = new webkitSpeechRecognition();
   recognition.continuous = true;
   recognition.onresult = function (event) {
     if (event.results.length > 0) {
       q.value = event.results[0][0].transcript
       console.log(q.value)
-      onPlay()
+      handleSpeechTrigger()
     }
     recognition.stop()
   }
   let forwardTimes = []
 
-  function updateTimeStats(timeInMs) {
-    forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
-    const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
-    $('#time').val(`${Math.round(avgTimeInMs)} ms`)
-    $('#fps').val(`${faceapi.round(1000 / avgTimeInMs)}`)
-  }
-
-  async function onPlay() {
+  async function handleSpeechTrigger() {
+    await initWebcam();
     const videoEl = $('#inputVideo').get(0)
     const canvas = $('#overlay').get(0)
 
@@ -80,8 +76,6 @@
     const input = document.getElementById('inputVideo')
 
     const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFaceLandmarks().withFaceDescriptors()
-
-    //      const result = await faceapi.detectSingleFace(videoEl, options)
 
     const labels = ['brent']
 
@@ -159,7 +153,7 @@
     }
 
     $("#inputVideo").css("opacity", 0)
-    //     setTimeout(() => onPlay(videoEl), 5000)
+    //     setTimeout(() => handleSpeechTrigger(videoEl), 5000)
   }
 
   async function run() {
@@ -169,15 +163,19 @@
     await faceapi.loadMtcnnModel('/')
     await faceapi.loadFaceLandmarkModel('/')
     await faceapi.loadFaceRecognitionModel('/')
+    await initWebcam();
+    $('#loader').hide();
+  }
 
+  async function initWebcam() {
+    if (isCameraOpen) {
+      return;
+    }
     // try to access users webcam and stream the images
     // to the video element
-    const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
-
-    $('#loader').hide();
-
-    const videoEl = $('#inputVideo').get(0)
-    videoEl.srcObject = stream
+    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+    $('#inputVideo').get(0).srcObject = stream;
+    isCameraOpen = true;
   }
 
   function updateResults() { }
