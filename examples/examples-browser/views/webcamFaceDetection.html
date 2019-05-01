@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.css">
   <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+  <script src="js/glitch.min.js"></script>
 </head>
 <body>
   <div class="center-content page-container">
@@ -25,6 +26,16 @@
   </body>
 
   <script>
+  var recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.onresult = function(event) {
+    if (event.results.length > 0) {
+      q.value = event.results[0][0].transcript
+      console.log(q.value)
+      onPlay()
+    }
+    recognition.stop()
+  }
     let forwardTimes = []
 
     function updateTimeStats(timeInMs) {
@@ -42,32 +53,31 @@
         // number of scaled versions of the input image passed through the CNN
   // of the first stage, lower numbers will result in lower inference time,
   // but will also be less accurate
-  maxNumScales: 10,
+    maxNumScales: 10,
   // scale factor used to calculate the scale steps of the image
   // pyramid used in stage 1
-  scaleFactor: 0.709,
+    scaleFactor: 0.709,
   // the score threshold values used to filter the bounding
   // boxes of stage 1, 2 and 3
-  scoreThresholds: [0.6, 0.7, 0.7],
+      scoreThresholds: [0.6, 0.7, 0.7],
   // mininum face size to expect, the higher the faster processing will be,
 // but smaller faces won't be detected
       minFaceSize: 50
     }
 
-    const mtcnnResults = await faceapi.mtcnn(videoEl, mtcnnForwardParams)
-      console.log('mtcnn results: ', mtcnnResults)
-      if (mtcnnResults.length > 0) {
-//      faceapi.drawDetection('overlay', mtcnnResults.map(res => res.faceDetection), { withScore: false })
-//      faceapi.drawLandmarks('overlay', mtcnnResults.map(res => res.faceLandmarks), { lineWidth: 4, color: 'red' })
-      }
+    //const mtcnnResults = await faceapi.mtcnn(videoEl, mtcnnForwardParams)
+    //  console.log('mtcnn results: ', mtcnnResults)
+    //  if (mtcnnResults.length > 0) {
+//  //    faceapi.drawDetection('overlay', mtcnnResults.map(res => res.faceDetection), { withScore: false })
+//  //    faceapi.drawLandmarks('overlay', mtcnnResults.map(res => res.faceLandmarks), { lineWidth: 4, color: 'red' })
+    //  }
 
-      const ts = Date.now()
+    //  const ts = Date.now()
       // calculate face landmarks
       const options = new faceapi.MtcnnOptions(mtcnnForwardParams)
 const input = document.getElementById('inputVideo')
 
 const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFaceLandmarks().withFaceDescriptors()
-      console.log('full face descriptions: ', fullFaceDescriptions)
 
 //      const result = await faceapi.detectSingleFace(videoEl, options)
 
@@ -121,20 +131,39 @@ const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFa
     context.moveTo(0, 0)
     context.stroke()
     context.fill()
-    context.drawImage(videoEl, 0,0, canvas.width, canvas.height);
-//    faceapi.drawDetection(canvas, boxesWithText)
-    if (!isBrent) {
-      for (let x = 0; x < 50; x++) {
-        let xCoord = Math.random()*680
-        let yCoord = Math.random()*480
-        context.strokeStyle = "red"
-        context.rect(xCoord, yCoord, 80, 30)
-        context.stroke()
-        context.fill()
-      }
+    context.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
+      if (!isBrent) {
+      var data = canvas.toDataURL('image/png');
+      let photo = new Image()
+      photo.setAttribute('src', data);
+      photo.onload = function() {
+      glitch( { seed: 25, quality: 30 } ).fromImage( photo ).toDataURL().then( function( dataURL ) {
+			var glitchedImg = new Image();
+			glitchedImg.src = dataURL;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.beginPath()
+    context.moveTo(0, 0)
+    context.stroke()
+    context.fill()
+        glitchedImg.onload = function() {
+          context.drawImage(glitchedImg, 0,0, canvas.width, canvas.height);
+        }
+      });
     }
+    }
+//    faceapi.drawDetection(canvas, boxesWithText)
+//    if (!isBrent) {
+//      for (let x = 0; x < 50; x++) {
+//        let xCoord = Math.random()*680
+//        let yCoord = Math.random()*480
+//        context.strokeStyle = "red"
+//        context.rect(xCoord, yCoord, 80, 30)
+//        context.stroke()
+//        context.fill()
+//      }
+//    }
     $("#inputVideo").css("opacity", 0)
-     setTimeout(() => onPlay(videoEl), 5000)
+//     setTimeout(() => onPlay(videoEl), 5000)
   }
 
     async function run() {
