@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <script src="face-api.js"></script>
   <script src="js/commons.js"></script>
@@ -11,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
   <script src="js/glitch.min.js"></script>
 </head>
+
 <body>
   <div class="center-content page-container">
 
@@ -21,14 +23,14 @@
       <video onloadedmetadata="onPlay(this)" onplay="resize_canvas(this)" id="inputVideo" autoplay muted></video>
       <canvas id="overlay" />
     </div>
-  <input type="search" id="q" name="q" size=60>
-  <input type="button" value="Click to Speak" onclick="recognition.start()">
-  </body>
+    <input type="search" id="q" name="q" size=60>
+    <input type="button" value="Click to Speak" onclick="recognition.start()">
+</body>
 
-  <script>
+<script>
   var recognition = new webkitSpeechRecognition();
   recognition.continuous = true;
-  recognition.onresult = function(event) {
+  recognition.onresult = function (event) {
     if (event.results.length > 0) {
       q.value = event.results[0][0].transcript
       console.log(q.value)
@@ -36,94 +38,94 @@
     }
     recognition.stop()
   }
-    let forwardTimes = []
+  let forwardTimes = []
 
-    function updateTimeStats(timeInMs) {
-      forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
-      const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
-      $('#time').val(`${Math.round(avgTimeInMs)} ms`)
-      $('#fps').val(`${faceapi.round(1000 / avgTimeInMs)}`)
-    }
+  function updateTimeStats(timeInMs) {
+    forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
+    const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
+    $('#time').val(`${Math.round(avgTimeInMs)} ms`)
+    $('#fps').val(`${faceapi.round(1000 / avgTimeInMs)}`)
+  }
 
-    async function onPlay() {
-      const videoEl = $('#inputVideo').get(0)
-      const canvas = $('#overlay').get(0)
+  async function onPlay() {
+    const videoEl = $('#inputVideo').get(0)
+    const canvas = $('#overlay').get(0)
 
     const mtcnnForwardParams = {
-        // number of scaled versions of the input image passed through the CNN
-  // of the first stage, lower numbers will result in lower inference time,
-  // but will also be less accurate
-    maxNumScales: 10,
-  // scale factor used to calculate the scale steps of the image
-  // pyramid used in stage 1
-    scaleFactor: 0.709,
-  // the score threshold values used to filter the bounding
-  // boxes of stage 1, 2 and 3
+      // number of scaled versions of the input image passed through the CNN
+      // of the first stage, lower numbers will result in lower inference time,
+      // but will also be less accurate
+      maxNumScales: 10,
+      // scale factor used to calculate the scale steps of the image
+      // pyramid used in stage 1
+      scaleFactor: 0.709,
+      // the score threshold values used to filter the bounding
+      // boxes of stage 1, 2 and 3
       scoreThresholds: [0.6, 0.7, 0.7],
-  // mininum face size to expect, the higher the faster processing will be,
-// but smaller faces won't be detected
+      // mininum face size to expect, the higher the faster processing will be,
+      // but smaller faces won't be detected
       minFaceSize: 50
     }
 
     //const mtcnnResults = await faceapi.mtcnn(videoEl, mtcnnForwardParams)
     //  console.log('mtcnn results: ', mtcnnResults)
     //  if (mtcnnResults.length > 0) {
-//  //    faceapi.drawDetection('overlay', mtcnnResults.map(res => res.faceDetection), { withScore: false })
-//  //    faceapi.drawLandmarks('overlay', mtcnnResults.map(res => res.faceLandmarks), { lineWidth: 4, color: 'red' })
+    //  //    faceapi.drawDetection('overlay', mtcnnResults.map(res => res.faceDetection), { withScore: false })
+    //  //    faceapi.drawLandmarks('overlay', mtcnnResults.map(res => res.faceLandmarks), { lineWidth: 4, color: 'red' })
     //  }
 
     //  const ts = Date.now()
-      // calculate face landmarks
-      const options = new faceapi.MtcnnOptions(mtcnnForwardParams)
-const input = document.getElementById('inputVideo')
+    // calculate face landmarks
+    const options = new faceapi.MtcnnOptions(mtcnnForwardParams)
+    const input = document.getElementById('inputVideo')
 
-const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFaceLandmarks().withFaceDescriptors()
+    const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFaceLandmarks().withFaceDescriptors()
 
-//      const result = await faceapi.detectSingleFace(videoEl, options)
+    //      const result = await faceapi.detectSingleFace(videoEl, options)
 
     const labels = ['brent']
 
     const labeledFaceDescriptors = await Promise.all(
       labels.map(async label => {
-      console.log('hitting labeled face descriptors')
+        console.log('hitting labeled face descriptors')
         // fetch image data from urls and convert blob to HTMLImage element
         const imgUrl = `${label}.jpg`
         const img = await faceapi.fetchImage(imgUrl)
         console.log(img);
-        
+
         // detect the face with the highest score in the image and compute it's landmarks and face descriptor
         const fullFaceDescription = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
         console.log('foo');
-        
+
         if (!fullFaceDescription) {
           throw new Error(`no faces detected for ${label}`)
         }
-        
+
         const faceDescriptors = [fullFaceDescription.descriptor]
         console.log('face descriptors: ', faceDescriptors)
         return new faceapi.LabeledFaceDescriptors(label, faceDescriptors)
-    }))
+      }))
     // 0.6 is a good distance threshold value to judge
     // whether the descriptors match or not
     const maxDescriptorDistance = 0.6
     const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, maxDescriptorDistance)
-      console.log('facematcher: ', faceMatcher)
+    console.log('facematcher: ', faceMatcher)
 
     const results = fullFaceDescriptions.map(fd => faceMatcher.findBestMatch(fd.descriptor))
     let isBrent = false
-      console.log('results: ', results);
+    console.log('results: ', results);
     if (results.length > 0) {
-    const boxesWithText = results.map((bestMatch, i) => {
-      const box = fullFaceDescriptions[i].detection.box
-      const text = bestMatch.toString()
-      console.log('text: ', text)
-      if (text.startsWith("brent")) {
-        isBrent = true
-        console.log('is brent: ', isBrent)
-      }
-      const boxWithText = new faceapi.BoxWithText(box, text)
-      return boxWithText
-    })
+      const boxesWithText = results.map((bestMatch, i) => {
+        const box = fullFaceDescriptions[i].detection.box
+        const text = bestMatch.toString()
+        console.log('text: ', text)
+        if (text.startsWith("brent")) {
+          isBrent = true
+          console.log('is brent: ', isBrent)
+        }
+        const boxWithText = new faceapi.BoxWithText(box, text)
+        return boxWithText
+      })
     }
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -132,69 +134,69 @@ const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFa
     context.stroke()
     context.fill()
     context.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
-      if (!isBrent) {
+    if (!isBrent) {
       var data = canvas.toDataURL('image/png');
       let photo = new Image()
       photo.setAttribute('src', data);
-      photo.onload = function() {
-      glitch( { seed: 25, quality: 30 } ).fromImage( photo ).toDataURL().then( function( dataURL ) {
-			var glitchedImg = new Image();
-			glitchedImg.src = dataURL;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.beginPath()
-    context.moveTo(0, 0)
-    context.stroke()
-    context.fill()
-        glitchedImg.onload = function() {
-          context.drawImage(glitchedImg, 0,0, canvas.width, canvas.height);
-        }
-      });
+      photo.onload = function () {
+        glitch({ seed: 25, quality: 30 }).fromImage(photo).toDataURL().then(function (dataURL) {
+          var glitchedImg = new Image();
+          glitchedImg.src = dataURL;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.beginPath()
+          context.moveTo(0, 0)
+          context.stroke()
+          context.fill()
+          glitchedImg.onload = function () {
+            context.drawImage(glitchedImg, 0, 0, canvas.width, canvas.height);
+          }
+        });
+      }
     }
-    }
-//    faceapi.drawDetection(canvas, boxesWithText)
-//    if (!isBrent) {
-//      for (let x = 0; x < 50; x++) {
-//        let xCoord = Math.random()*680
-//        let yCoord = Math.random()*480
-//        context.strokeStyle = "red"
-//        context.rect(xCoord, yCoord, 80, 30)
-//        context.stroke()
-//        context.fill()
-//      }
-//    }
+    //    faceapi.drawDetection(canvas, boxesWithText)
+    //    if (!isBrent) {
+    //      for (let x = 0; x < 50; x++) {
+    //        let xCoord = Math.random()*680
+    //        let yCoord = Math.random()*480
+    //        context.strokeStyle = "red"
+    //        context.rect(xCoord, yCoord, 80, 30)
+    //        context.stroke()
+    //        context.fill()
+    //      }
+    //    }
     $("#inputVideo").css("opacity", 0)
-//     setTimeout(() => onPlay(videoEl), 5000)
+    //     setTimeout(() => onPlay(videoEl), 5000)
   }
 
-    async function run() {
-      // load face detection model
-        // load the models
-      await faceapi.loadSsdMobilenetv1Model('/')
-      await faceapi.loadMtcnnModel('/')
- await faceapi.loadFaceLandmarkModel('/')
-      await faceapi.loadFaceRecognitionModel('/')
+  async function run() {
+    // load face detection model
+    // load the models
+    await faceapi.loadSsdMobilenetv1Model('/')
+    await faceapi.loadMtcnnModel('/')
+    await faceapi.loadFaceLandmarkModel('/')
+    await faceapi.loadFaceRecognitionModel('/')
 
-      // try to access users webcam and stream the images
-      // to the video element
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
-      const videoEl = $('#inputVideo').get(0)
-      videoEl.srcObject = stream
-    }
+    // try to access users webcam and stream the images
+    // to the video element
+    const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
+    const videoEl = $('#inputVideo').get(0)
+    videoEl.srcObject = stream
+  }
 
-    function updateResults() {}
+  function updateResults() { }
 
-    $(document).ready(function() {
-      run()
-    })
-function resize_canvas(element)
-{
-  var w = element.offsetWidth;
-  var h = element.offsetHeight;
-  var cv = document.getElementById("overlay");
-  cv.width = w;
-  cv.height =h;
-}
+  $(document).ready(function () {
+    run()
+  })
+  function resize_canvas(element) {
+    var w = element.offsetWidth;
+    var h = element.offsetHeight;
+    var cv = document.getElementById("overlay");
+    cv.width = w;
+    cv.height = h;
+  }
 
-  </script>
+</script>
 </body>
+
 </html>
