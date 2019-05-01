@@ -153,17 +153,11 @@
         });
       }
     }
-    //    faceapi.drawDetection(canvas, boxesWithText)
-    //    if (!isBrent) {
-    //      for (let x = 0; x < 50; x++) {
-    //        let xCoord = Math.random()*680
-    //        let yCoord = Math.random()*480
-    //        context.strokeStyle = "red"
-    //        context.rect(xCoord, yCoord, 80, 30)
-    //        context.stroke()
-    //        context.fill()
-    //      }
-    //    }
+
+    for (let track of videoEl.srcObject.getTracks()) {
+      track.stop();
+    }
+
     $("#inputVideo").css("opacity", 0)
     //     setTimeout(() => onPlay(videoEl), 5000)
   }
@@ -179,6 +173,9 @@
     // try to access users webcam and stream the images
     // to the video element
     const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
+
+    $('#loader').hide();
+
     const videoEl = $('#inputVideo').get(0)
     videoEl.srcObject = stream
   }
@@ -188,6 +185,7 @@
   $(document).ready(function () {
     run()
   })
+
   function resize_canvas(element) {
     var w = element.offsetWidth;
     var h = element.offsetHeight;
