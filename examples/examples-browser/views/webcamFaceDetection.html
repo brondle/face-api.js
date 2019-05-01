@@ -11,126 +11,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
 </head>
 <body>
-  <div id="navbar"></div>
   <div class="center-content page-container">
 
     <div class="progress" id="loader">
       <div class="indeterminate"></div>
     </div>
     <div style="position: relative" class="margin">
-      <video onloadedmetadata="onPlay(this)" id="inputVideo" autoplay muted></video>
+      <video onloadedmetadata="onPlay(this)" onplay="resize_canvas(this)" id="inputVideo" autoplay muted></video>
       <canvas id="overlay" />
     </div>
-
-    <div class="row side-by-side">
-
-      <!-- face_detector_selection_control -->
-      <div id="face_detector_selection_control" class="row input-field" style="margin-right: 20px;">
-        <select id="selectFaceDetector">
-          <option value="ssd_mobilenetv1">SSD Mobilenet V1</option>
-          <option value="tiny_face_detector">Tiny Face Detector</option>
-          <option value="mtcnn">MTCNN</option>
-        </select>
-        <label>Select Face Detector</label>
-      </div>
-      <!-- face_detector_selection_control -->
-
-      <!-- fps_meter -->
-      <div id="fps_meter" class="row side-by-side">
-        <div>
-          <label for="time">Time:</label>
-          <input disabled value="-" id="time" type="text" class="bold">
-          <label for="fps">Estimated Fps:</label>
-          <input disabled value="-" id="fps" type="text" class="bold">
-        </div>
-      </div>
-      <!-- fps_meter -->
-
-    </div>
-
-
-    <!-- ssd_mobilenetv1_controls -->
-    <span id="ssd_mobilenetv1_controls">
-      <div class="row side-by-side">
-        <div class="row">
-          <label for="minConfidence">Min Confidence:</label>
-          <input disabled value="0.5" id="minConfidence" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onDecreaseMinConfidence()"
-        >
-          <i class="material-icons left">-</i>
-        </button>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onIncreaseMinConfidence()"
-        >
-          <i class="material-icons left">+</i>
-        </button>
-      </div>
-    </span>
-    <!-- ssd_mobilenetv1_controls -->
-
-    <!-- tiny_face_detector_controls -->
-    <span id="tiny_face_detector_controls">
-      <div class="row side-by-side">
-        <div class="row input-field" style="margin-right: 20px;">
-          <select id="inputSize">
-            <option value="" disabled selected>Input Size:</option>
-            <option value="128">128 x 128</option>
-            <option value="160">160 x 160</option>
-            <option value="224">224 x 224</option>
-            <option value="320">320 x 320</option>
-            <option value="416">416 x 416</option>
-            <option value="512">512 x 512</option>
-            <option value="608">608 x 608</option>
-          </select>
-          <label>Input Size</label>
-        </div>
-        <div class="row">
-          <label for="scoreThreshold">Score Threshold:</label>
-          <input disabled value="0.5" id="scoreThreshold" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onDecreaseScoreThreshold()"
-        >
-          <i class="material-icons left">-</i>
-        </button>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onIncreaseScoreThreshold()"
-        >
-          <i class="material-icons left">+</i>
-        </button>
-      </div>
-    </span>
-    <!-- tiny_face_detector_controls -->
-
-    <!-- mtcnn_controls -->
-    <span id="mtcnn_controls">
-      <div class="row side-by-side">
-        <div class="row">
-          <label for="minFaceSize">Minimum Face Size:</label>
-          <input disabled value="20" id="minFaceSize" type="text" class="bold">
-        </div>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onDecreaseMinFaceSize()"
-        >
-          <i class="material-icons left">-</i>
-        </button>
-        <button
-          class="waves-effect waves-light btn"
-          onclick="onIncreaseMinFaceSize()"
-        >
-          <i class="material-icons left">+</i>
-        </button>
-      </div>
-    </span>
-    <!-- mtcnn_controls -->
-
+  <input type="search" id="q" name="q" size=60>
+  <input type="button" value="Click to Speak" onclick="recognition.start()">
   </body>
 
   <script>
@@ -145,30 +36,114 @@
 
     async function onPlay() {
       const videoEl = $('#inputVideo').get(0)
+      const canvas = $('#overlay').get(0)
 
-      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
-        return setTimeout(() => onPlay())
+    const mtcnnForwardParams = {
+        // number of scaled versions of the input image passed through the CNN
+  // of the first stage, lower numbers will result in lower inference time,
+  // but will also be less accurate
+  maxNumScales: 10,
+  // scale factor used to calculate the scale steps of the image
+  // pyramid used in stage 1
+  scaleFactor: 0.709,
+  // the score threshold values used to filter the bounding
+  // boxes of stage 1, 2 and 3
+  scoreThresholds: [0.6, 0.7, 0.7],
+  // mininum face size to expect, the higher the faster processing will be,
+// but smaller faces won't be detected
+      minFaceSize: 50
+    }
 
-
-      const options = getFaceDetectorOptions()
-
-      const ts = Date.now()
-
-      const result = await faceapi.detectSingleFace(videoEl, options)
-
-      updateTimeStats(Date.now() - ts)
-
-      if (result) {
-        drawDetections(videoEl, $('#overlay').get(0), [result])
+    const mtcnnResults = await faceapi.mtcnn(videoEl, mtcnnForwardParams)
+      console.log('mtcnn results: ', mtcnnResults)
+      if (mtcnnResults.length > 0) {
+//      faceapi.drawDetection('overlay', mtcnnResults.map(res => res.faceDetection), { withScore: false })
+//      faceapi.drawLandmarks('overlay', mtcnnResults.map(res => res.faceLandmarks), { lineWidth: 4, color: 'red' })
       }
 
-      setTimeout(() => onPlay())
+      const ts = Date.now()
+      // calculate face landmarks
+      const options = new faceapi.MtcnnOptions(mtcnnForwardParams)
+const input = document.getElementById('inputVideo')
+
+const fullFaceDescriptions = await faceapi.detectAllFaces(input, options).withFaceLandmarks().withFaceDescriptors()
+      console.log('full face descriptions: ', fullFaceDescriptions)
+
+//      const result = await faceapi.detectSingleFace(videoEl, options)
+
+    const labels = ['brent']
+
+    const labeledFaceDescriptors = await Promise.all(
+      labels.map(async label => {
+      console.log('hitting labeled face descriptors')
+        // fetch image data from urls and convert blob to HTMLImage element
+        const imgUrl = `${label}.jpg`
+        const img = await faceapi.fetchImage(imgUrl)
+        console.log(img);
+        
+        // detect the face with the highest score in the image and compute it's landmarks and face descriptor
+        const fullFaceDescription = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor()
+        console.log('foo');
+        
+        if (!fullFaceDescription) {
+          throw new Error(`no faces detected for ${label}`)
+        }
+        
+        const faceDescriptors = [fullFaceDescription.descriptor]
+        console.log('face descriptors: ', faceDescriptors)
+        return new faceapi.LabeledFaceDescriptors(label, faceDescriptors)
+    }))
+    // 0.6 is a good distance threshold value to judge
+    // whether the descriptors match or not
+    const maxDescriptorDistance = 0.6
+    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, maxDescriptorDistance)
+      console.log('facematcher: ', faceMatcher)
+
+    const results = fullFaceDescriptions.map(fd => faceMatcher.findBestMatch(fd.descriptor))
+    let isBrent = false
+      console.log('results: ', results);
+    if (results.length > 0) {
+    const boxesWithText = results.map((bestMatch, i) => {
+      const box = fullFaceDescriptions[i].detection.box
+      const text = bestMatch.toString()
+      console.log('text: ', text)
+      if (text.startsWith("brent")) {
+        isBrent = true
+        console.log('is brent: ', isBrent)
+      }
+      const boxWithText = new faceapi.BoxWithText(box, text)
+      return boxWithText
+    })
     }
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.beginPath()
+    context.moveTo(0, 0)
+    context.stroke()
+    context.fill()
+    context.drawImage(videoEl, 0,0, canvas.width, canvas.height);
+//    faceapi.drawDetection(canvas, boxesWithText)
+    if (!isBrent) {
+      for (let x = 0; x < 50; x++) {
+        let xCoord = Math.random()*680
+        let yCoord = Math.random()*480
+        context.strokeStyle = "red"
+        context.rect(xCoord, yCoord, 80, 30)
+        context.stroke()
+        context.fill()
+      }
+    }
+    $("#inputVideo").css("opacity", 0)
+     setTimeout(() => onPlay(videoEl), 5000)
+  }
 
     async function run() {
       // load face detection model
-      await changeFaceDetector(TINY_FACE_DETECTOR)
-      changeInputSize(128)
+        // load the models
+      await faceapi.loadSsdMobilenetv1Model('/')
+      await faceapi.loadMtcnnModel('/')
+ await faceapi.loadFaceLandmarkModel('/')
+      await faceapi.loadFaceRecognitionModel('/')
 
       // try to access users webcam and stream the images
       // to the video element
@@ -180,10 +155,17 @@
     function updateResults() {}
 
     $(document).ready(function() {
-      renderNavBar('#navbar', 'webcam_face_detection')
-      initFaceDetectionControls()
       run()
     })
+function resize_canvas(element)
+{
+  var w = element.offsetWidth;
+  var h = element.offsetHeight;
+  var cv = document.getElementById("overlay");
+  cv.width = w;
+  cv.height =h;
+}
+
   </script>
 </body>
 </html>
